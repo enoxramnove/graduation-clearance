@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <h2>Student Clearance Portal</h2>
+            <button class="danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card" id="actionCard">
+            <h3>Clearance Request Status</h3>
+            <p id="statusInfo">Loading status...</p>
+            <div id="actionButtonContainer" style="margin-top: 15px;"></div>
+        </div>
+
+        <div class="card">
+            <h3>Notifications & Rejection Feedback</h3>
+            <ul id="notificationList" style="list-style-type: none; padding-left: 0;">
+                <li>Loading notifications...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        async function submitRequest() {
+            const res = await fetch('/api/requests/submit', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            location.reload();
+        }
+
+        async function resubmitRequest() {
+            const res = await fetch('/api/requests/resubmit', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            location.reload();
+        }
+
+        // Add fetch logic to pull active student status & notifications here
+    </script>
+</body>
+</html>
