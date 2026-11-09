@@ -1,8 +1,7 @@
 const db = require('../config/db');
 
-// Updated sequence map starting with Guild
+// Sequence map for state forwarding
 const STAGE_SEQUENCE = {
-    'Guild': 'Library',
     'Library': 'Finance',
     'Finance': 'HOD',
     'HOD': 'Dean',
@@ -10,12 +9,13 @@ const STAGE_SEQUENCE = {
     'AR': 'Completed'
 };
 
-// Student Submits Initial Request (Starts at Guild now)
+// Student Submits Initial Request
 exports.submitRequest = async (req, res) => {
     const { reg_no } = req.user;
     if (!reg_no) return res.status(400).json({ error: 'Only students can submit clearance requests.' });
 
     try {
+        // Check if request already exists
         const [existing] = await db.execute('SELECT * FROM clearance_requests WHERE reg_no = ?', [reg_no]);
         if (existing.length > 0) {
             return res.status(400).json({ error: 'Clearance request already exists for this registration number.' });
@@ -23,10 +23,10 @@ exports.submitRequest = async (req, res) => {
 
         await db.execute(`
             INSERT INTO clearance_requests (reg_no, current_stage, status) 
-            VALUES (?, 'Guild', 'Pending')
+            VALUES (?, 'Library', 'Pending')
         `, [reg_no]);
 
-        res.status(201).json({ message: 'Clearance request submitted successfully to Guild Office.' });
+        res.status(201).json({ message: 'Clearance request submitted successfully to Library.' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to submit clearance request.' });
@@ -36,12 +36,13 @@ exports.submitRequest = async (req, res) => {
 // Officer Approves Request
 exports.approveRequest = async (req, res) => {
     const { requestId } = req.params;
-    const officerRole = req.user.role_name; // e.g., 'Guild', 'Librarian', etc.
+    const officerRole = req.user.role_name; // e.g., 'Librarian', 'Finance', etc.
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
+        // Get current request state
         const [requests] = await connection.execute('SELECT * FROM clearance_requests WHERE request_id = ?', [requestId]);
         if (requests.length === 0) {
             await connection.rollback();
@@ -50,16 +51,19 @@ exports.approveRequest = async (req, res) => {
 
         const reqData = requests[0];
 
+        // Validate authority
         if (reqData.current_stage !== officerRole) {
             await connection.rollback();
             return res.status(403).json({ error: `Unauthorized. Request is currently at ${reqData.current_stage}, not your department.` });
         }
 
+        // Record approval history
         await connection.execute(`
             INSERT INTO approvals (request_id, department, decision, comments) 
             VALUES (?, ?, 'Approved', 'Cleared successfully')
         `, [requestId, officerRole]);
 
+        // Advance Stage
         const nextStage = STAGE_SEQUENCE[officerRole];
         const newStatus = nextStage === 'Completed' ? 'Completed' : 'Pending';
 
@@ -69,6 +73,7 @@ exports.approveRequest = async (req, res) => {
             WHERE request_id = ?
         `, [nextStage, newStatus, requestId]);
 
+        // Notify Student
         await connection.execute(`
             INSERT INTO notifications (reg_no, message) 
             VALUES (?, ?)
@@ -110,17 +115,20 @@ exports.rejectRequest = async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized stage access.' });
         }
 
+        // Record rejection history
         await connection.execute(`
             INSERT INTO approvals (request_id, department, decision, comments) 
             VALUES (?, ?, 'Rejected', ?)
         `, [requestId, officerRole, comments]);
 
+        // Update request state to stopped/rejected
         await connection.execute(`
             UPDATE clearance_requests 
             SET status = 'Rejected', last_rejected_by = ? 
             WHERE request_id = ?
         `, [officerRole, requestId]);
 
+        // Notify student with the specific reason
         await connection.execute(`
             INSERT INTO notifications (reg_no, message) 
             VALUES (?, ?)
@@ -158,7 +166,7 @@ exports.resubmitRequest = async (req, res) => {
             return res.status(400).json({ error: 'Can only resubmit requests that have been rejected.' });
         }
 
-        const targetDepartment = reqData.last_rejected_by; 
+        const targetDepartment = reqData.last_rejected_by; // Returns ONLY to rejecting dept
 
         await connection.execute(`
             UPDATE clearance_requests 
@@ -179,47 +187,5 @@ exports.resubmitRequest = async (req, res) => {
         res.status(500).json({ error: 'Failed to resubmit request.' });
     } finally {
         connection.release();
-    }
-};
-
-// NEW: Faculty Head Oversight Overview API
-exports.getFacultyHeadOverview = async (req, res) => {
-    try {
-        // Count pending requests per stage to detect bottlenecks
-        const [bottlenecks] = await db.execute(`
-            SELECT current_stage, COUNT(*) as pending_count 
-            FROM clearance_requests 
-            WHERE status = 'Pending' 
-            GROUP BY current_stage
-        `);
-
-        // Overall statistics
-        const [statsRows] = await db.execute(`
-            SELECT 
-                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected,
-                COUNT(*) as total
-            FROM clearance_requests
-        `);
-
-        // Recent audit/approval logs across all departments
-        const [recentActivity] = await db.execute(`
-            SELECT a.*, c.reg_no, s.fullname 
-            FROM approvals a
-            JOIN clearance_requests c ON a.request_id = c.request_id
-            JOIN students s ON c.reg_no = s.reg_no
-            ORDER BY a.action_date DESC
-            LIMIT 15
-        `);
-
-        res.json({
-            bottlenecks,
-            stats: statsRows[0],
-            recentActivity
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to retrieve oversight metrics.' });
     }
 };
