@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Department Officer Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <h2 id="roleTitle">Department Portal</h2>
+            <button class="danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card">
+            <h3>Pending Clearance Requests</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Student Reg No</th>
+                        <th>Current Stage</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="requestTableBody">
+                    <tr><td colspan="5" style="text-align: center;">Loading requests...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        if (!token) window.location.href = '/login.html';
+
+        document.getElementById('roleTitle').textContent = `${role} Clearance Dashboard`;
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        async function approveRequest(requestId) {
+            const res = await fetch(`/api/requests/${requestId}/approve`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            location.reload();
+        }
+
+        async function rejectRequest(requestId) {
+            const reason = prompt("Enter reason for rejection:");
+            if (!reason) return;
+
+            const res = await fetch(`/api/requests/${requestId}/reject`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ comments: reason })
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            location.reload();
+        }
+    </script>
+</body>
+</html>
