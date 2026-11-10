@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Graduation Clearance System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 400px;">
+        <h2>System Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username / Reg No:</label>
+                <input type="text" id="username" required placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password" required placeholder="Enter password">
+            </div>
+            <button type="submit" style="width: 100%;">Login</button>
+        </form>
+        <p id="errorMsg" style="color: red; margin-top: 10px; text-align: center;"></p>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Login failed');
+
+                // Save token and role locally
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('role', data.role);
+
+                // Redirect based on role
+                if (data.role === 'Student') {
+                    window.location.href = '/student-dashboard.html';
+                } else {
+                    window.location.href = '/officer-dashboard.html';
+                }
+            } catch (err) {
+                errorMsg.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>
