@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Faculty Head Oversight Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 1000px;">
+        <div class="navbar">
+            <h2>Faculty Head Oversight Portal</h2>
+            <button class="danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card">
+            <h3>System Clearance Statistics</h3>
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div style="background:#e8f4f8; padding:15px; border-radius:5px; flex:1; text-align:center;">
+                    <h4 id="statTotal">0</h4>
+                    <p>Total Requests</p>
+                </div>
+                <div style="background:#eafaf1; padding:15px; border-radius:5px; flex:1; text-align:center;">
+                    <h4 id="statCompleted" style="color: #27ae60;">0</h4>
+                    <p>Completed</p>
+                </div>
+                <div style="background:#fef9e7; padding:15px; border-radius:5px; flex:1; text-align:center;">
+                    <h4 id="statPending" style="color: #f39c12;">0</h4>
+                    <p>Pending</p>
+                </div>
+                <div style="background:#fdebd0; padding:15px; border-radius:5px; flex:1; text-align:center;">
+                    <h4 id="statRejected" style="color: #c0392b;">0</h4>
+                    <p>Rejected</p>
+                </div>
+            </div>
+
+            <h3>Department Bottlenecks (Pending Count per Stage)</h3>
+            <ul id="bottleneckList" style="list-style-type: none; padding: 0; margin-bottom: 20px;">
+                <li>Loading bottleneck data...</li>
+            </ul>
+
+            <h3>Recent Department Activity Audit Trail</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Student Reg No</th>
+                        <th>Department</th>
+                        <th>Decision</th>
+                        <th>Comments</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr><td colspan="5" style="text-align: center;">Loading activity logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        if (!token || role !== 'FacultyHead') window.location.href = '/login.html';
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        async function fetchOversightData() {
+            try {
+                const res = await fetch('/api/faculty-head/overview', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                // Update Stats
+                document.getElementById('statTotal').textContent = data.stats.total || 0;
+                document.getElementById('statCompleted').textContent = data.stats.completed || 0;
+                document.getElementById('statPending').textContent = data.stats.pending || 0;
+                document.getElementById('statRejected').textContent = data.stats.rejected || 0;
+
+                // Update Bottlenecks
+                const bList = document.getElementById('bottleneckList');
+                bList.innerHTML = '';
+                if (data.bottlenecks.length === 0) {
+                    bList.innerHTML = '<li>No pending bottlenecks found. All clear!</li>';
+                } else {
+                    data.bottlenecks.forEach(b => {
+                        const li = document.createElement('li');
+                        li.style.padding = '8px 12px';
+                        li.style.margin = '5px 0';
+                        li.style.background = '#f8f9fa';
+                        li.style.borderLeft = '4px solid #3498db';
+                        li.innerHTML = `<strong>${b.current_stage}:</strong> ${b.pending_count} pending request(s)`;
+                        bList.appendChild(li);
+                    });
+                }
+
+                // Update Audit Trail Table
+                const auditBody = document.getElementById('auditTableBody');
+                auditBody.innerHTML = '';
+                if (data.recentActivity.length === 0) {
+                    auditBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No activity recorded yet.</td></tr>';
+                } else {
+                    data.recentActivity.forEach(act => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${new Date(act.action_date).toLocaleString()}</td>
+                            <td>${act.reg_no} (${act.fullname})</td>
+                            <td>${act.department}</td>
+                            <td><span class="status-badge ${act.decision === 'Approved' ? 'status-approved' : 'status-rejected'}">${act.decision}</span></td>
+                            <td>${act.comments || '-'}</td>
+                        `;
+                        auditBody.appendChild(tr);
+                    });
+                }
+            } catch (err) {
+                alert('Error loading dashboard metrics: ' + err.message);
+            }
+        }
+
+        fetchOversightData();
+    </script>
+</body>
+</html>
