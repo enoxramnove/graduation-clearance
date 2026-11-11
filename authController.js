@@ -1,24 +1,29 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
-const JWT_SECRET = 'your_super_secret_key_here';
+const db = require('./config/db');
 
 exports.login = async (req, res) => {
-    const { username, password } = req.body;
+    const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required.' });
+    }
+
     try {
         const [users] = await db.execute(`
-            SELECT u.*, r.role_name, s.reg_no 
+            SELECT u.user_id, u.username, u.password, r.role_name, s.reg_no
             FROM users u 
             JOIN roles r ON u.role_id = r.role_id 
             LEFT JOIN students s ON u.user_id = s.user_id 
             WHERE u.username = ?
         `, [username]);
 
-        if (users.length === 0) return res.status(404).json({ error: 'User not found' });
-
         const user = users[0];
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+        const isMatch = user ? await bcrypt.compare(password, user.password) : false;
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid username or password.' });
+        }
 
         const tokenPayload = {
             user_id: user.user_id,
@@ -27,13 +32,18 @@ exports.login = async (req, res) => {
             reg_no: user.reg_no || null
         };
 
-        const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '8h' });
+        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '8h' });
+        const redirectUrl = user.role_name === 'Student'
+            ? '/student-dashboard.html'
+            : user.role_name === 'FacultyHead'
+                ? '/faculty-head-dashboard.html'
+                : '/officer-dashboard.html';
 
         res.json({
             message: 'Login successful',
             token,
             role: user.role_name,
-            redirectUrl: `/${user.role_name.toLowerCase()}-dashboard.html`
+            redirectUrl
         });
     } catch (err) {
         console.error(err);

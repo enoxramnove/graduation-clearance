@@ -1,17 +1,18 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'your_super_secret_key_here'; // Use environment variables in production
 
 exports.verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.status(401).json({ error: 'Access denied. No token provided.' });
+    const authHeader = req.get('authorization') || '';
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (!match) {
+        return res.status(401).json({ error: 'A bearer token is required.' });
+    }
 
-    const token = authHeader.split(' ')[1];
     try {
-        const verified = jwt.verify(token, JWT_SECRET);
+        const verified = jwt.verify(match[1], process.env.JWT_SECRET);
         req.user = verified; // contains user_id, username, role_name, reg_no (if student)
         next();
-    } catch (err) {
-        res.status(403).json({ error: 'Invalid or expired token.' });
+    } catch {
+        res.status(401).json({ error: 'Invalid or expired token.' });
     }
 };
 

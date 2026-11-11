@@ -1,0 +1,75 @@
+const bcrypt = require('bcrypt');
+const db = require('../config/db');
+
+function readHidden(prompt) {
+    if (!process.stdin.isTTY || typeof process.stdin.setRawMode !== 'function') {
+        return Promise.reject(new Error('Run this command in an interactive terminal.'));
+    }
+
+    return new Promise((resolve, reject) => {
+        let value = '';
+        const cleanup = () => {
+            process.stdin.removeListener('data', onData);
+            process.stdin.setRawMode(false);
+            process.stdin.pause();
+            process.stdout.write('\n');
+        };
+        const onData = (key) => {
+            if (key === '\u0003') {
+                cleanup();
+                reject(new Error('Password reset cancelled.'));
+            } else if (key === '\r' || key === '\n') {
+                cleanup();
+                resolve(value);
+            } else if (key === '\u007f' || key === '\b') {
+                if (value.length > 0) {
+                    value = value.slice(0, -1);
+                    process.stdout.write('\b \b');
+                }
+            } else if (key >= ' ') {
+                value += key;
+                process.stdout.write('*');
+            }
+        };
+
+        process.stdout.write(prompt);
+        process.stdin.setEncoding('utf8');
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', onData);
+    });
+}
+
+async function main() {
+    const username = process.argv[2]?.trim();
+    if (!username) {
+        throw new Error('Provide the account username, e.g. npm run reset-password -- "@guild.must"');
+    }
+
+    const password = await readHidden('New password (input hidden): ');
+    if (!password) {
+        throw new Error('Password cannot be empty.');
+    }
+    if (Buffer.byteLength(password, 'utf8') > 72) {
+        throw new Error('Bcrypt passwords must be no more than 72 bytes.');
+    }
+
+    const hash = await bcrypt.hash(password, 12);
+    const [result] = await db.execute(
+        'UPDATE users SET password = ? WHERE username = ?',
+        [hash, username]
+    );
+
+    if (result.affectedRows !== 1) {
+        throw new Error(`Expected one account named "${username}", found ${result.affectedRows}.`);
+    }
+
+    console.log(`Password reset successfully for "${username}".`);
+}
+
+main()
+    .catch((error) => {
+        console.error(error.message);
+        process.exitCode = 1;
+    })
+    .finally(() => db.end());

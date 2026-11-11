@@ -2,73 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Department Officer Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Department Dashboard | MUST Graduation Clearance</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/api.js" defer></script>
+    <script src="/js/officer-dashboard.js" defer></script>
 </head>
 <body>
-    <div class="container">
-        <div class="navbar">
-            <h2 id="roleTitle">Department Portal</h2>
-            <button class="danger" onclick="logout()">Logout</button>
-        </div>
+    <main class="container">
+        <header class="navbar">
+            <div class="brand-lockup">
+                <img class="brand-logo" src="/ham.png" alt="Mbarara University of Science and Technology crest" width="80" height="80">
+                <div class="brand-copy">
+                    <p class="eyebrow">Mbarara University of Science and Technology</p>
+                    <p class="brand-motto"><em>succed we must</em></p>
+                    <h1 id="roleTitle">Department dashboard</h1>
+                </div>
+            </div>
+            <button class="danger" id="logoutButton" type="button">Sign out</button>
+        </header>
 
-        <div class="card">
-            <h3>Pending Clearance Requests</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Request ID</th>
-                        <th>Student Reg No</th>
-                        <th>Current Stage</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="requestTableBody">
-                    <tr><td colspan="5" style="text-align: center;">Loading requests...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+        <p id="dashboardError" class="error-message" role="alert" hidden></p>
 
-    <script>
-        const token = localStorage.getItem('token');
-        const role = localStorage.getItem('role');
-        if (!token) window.location.href = '/login.html';
-
-        document.getElementById('roleTitle').textContent = `${role} Clearance Dashboard`;
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = '/login.html';
-        }
-
-        async function approveRequest(requestId) {
-            const res = await fetch(`/api/requests/${requestId}/approve`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            alert(data.message || data.error);
-            location.reload();
-        }
-
-        async function rejectRequest(requestId) {
-            const reason = prompt("Enter reason for rejection:");
-            if (!reason) return;
-
-            const res = await fetch(`/api/requests/${requestId}/reject`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
-                },
-                body: JSON.stringify({ comments: reason })
-            });
-            const data = await res.json();
-            alert(data.message || data.error);
-            location.reload();
-        }
-    </script>
+        <section class="card">
+            <h2>Requests awaiting your review</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request</th>
+                            <th>Student</th>
+                            <th>Current department</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestTableBody">
+                        <tr><td colspan="5">Loading pending requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 </body>
 </html>

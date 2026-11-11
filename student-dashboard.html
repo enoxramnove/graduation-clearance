@@ -2,60 +2,42 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Student Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Student Dashboard | MUST Graduation Clearance</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/api.js" defer></script>
+    <script src="/js/student-dashboard.js" defer></script>
 </head>
 <body>
-    <div class="container">
-        <div class="navbar">
-            <h2>Student Clearance Portal</h2>
-            <button class="danger" onclick="logout()">Logout</button>
-        </div>
+    <main class="container">
+        <header class="navbar">
+            <div class="brand-lockup">
+                <img class="brand-logo" src="/ham.png" alt="Mbarara University of Science and Technology crest" width="80" height="80">
+                <div class="brand-copy">
+                    <p class="eyebrow">Mbarara University of Science and Technology</p>
+                    <p class="brand-motto"><em>succed we must</em></p>
+                    <h1>Student dashboard</h1>
+                </div>
+            </div>
+            <button class="danger" id="logoutButton" type="button">Sign out</button>
+        </header>
 
-        <div class="card" id="actionCard">
-            <h3>Clearance Request Status</h3>
-            <p id="statusInfo">Loading status...</p>
-            <div id="actionButtonContainer" style="margin-top: 15px;"></div>
-        </div>
+        <p id="dashboardError" class="error-message" role="alert" hidden></p>
 
-        <div class="card">
-            <h3>Notifications & Rejection Feedback</h3>
-            <ul id="notificationList" style="list-style-type: none; padding-left: 0;">
+        <section class="card" aria-labelledby="statusHeading">
+            <h2 id="statusHeading">My clearance progress</h2>
+            <p id="statusInfo" aria-live="polite">Loading clearance status...</p>
+            <div id="actionButtonContainer" class="button-row"></div>
+            <p id="rejectionReason" class="rejection-reason" hidden></p>
+            <ol id="historyList" class="workflow-list" aria-label="Clearance stages"></ol>
+        </section>
+
+        <section class="card" aria-labelledby="notificationsHeading">
+            <h2 id="notificationsHeading">Notifications</h2>
+            <ul id="notificationList" class="message-list" aria-live="polite">
                 <li>Loading notifications...</li>
             </ul>
-        </div>
-    </div>
-
-    <script>
-        const token = localStorage.getItem('token');
-        if (!token) window.location.href = '/login.html';
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = '/login.html';
-        }
-
-        async function submitRequest() {
-            const res = await fetch('/api/requests/submit', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            alert(data.message || data.error);
-            location.reload();
-        }
-
-        async function resubmitRequest() {
-            const res = await fetch('/api/requests/resubmit', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            alert(data.message || data.error);
-            location.reload();
-        }
-
-        // Add fetch logic to pull active student status & notifications here
-    </script>
+        </section>
+    </main>
 </body>
 </html>

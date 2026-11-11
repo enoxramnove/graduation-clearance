@@ -2,57 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Graduation Clearance System</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | MUST Graduation Clearance</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/api.js" defer></script>
+    <script src="/js/login.js" defer></script>
 </head>
 <body>
-    <div class="container" style="max-width: 400px;">
-        <h2>System Login</h2>
+    <main class="container login-container">
+        <header class="login-brand">
+            <img class="brand-logo" src="/ham.png" alt="Mbarara University of Science and Technology crest" width="112" height="112">
+            <p class="eyebrow">Mbarara University of Science and Technology</p>
+            <p class="brand-motto"><em>succed we must</em></p>
+            <h1>Graduation Clearance</h1>
+        </header>
+        <p class="muted">Sign in with your university account.</p>
         <form id="loginForm">
             <div class="form-group">
-                <label>Username / Reg No:</label>
-                <input type="text" id="username" required placeholder="Enter username">
+                <label for="username">Username / Registration number</label>
+                <input type="text" id="username" name="username" required autocomplete="username"
+                       placeholder="e.g. @guild.must or 22/BIT/001/PS">
             </div>
             <div class="form-group">
-                <label>Password:</label>
-                <input type="password" id="password" required placeholder="Enter password">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
             </div>
-            <button type="submit" style="width: 100%;">Login</button>
+            <button type="submit">Sign in</button>
+            <p id="errorMsg" class="error-message" role="alert" hidden></p>
         </form>
-        <p id="errorMsg" style="color: red; margin-top: 10px; text-align: center;"></p>
-    </div>
-
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorMsg = document.getElementById('errorMsg');
-
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Login failed');
-
-                // Save token and role locally
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('role', data.role);
-
-                // Redirect based on role
-                if (data.role === 'Student') {
-                    window.location.href = '/student-dashboard.html';
-                } else {
-                    window.location.href = '/officer-dashboard.html';
-                }
-            } catch (err) {
-                errorMsg.textContent = err.message;
-            }
-        });
-    </script>
+    </main>
 </body>
 </html>
