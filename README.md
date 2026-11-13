@@ -57,6 +57,22 @@ npm run reset-password -- "@guild.must"
 Replace the username with the exact account to update. Enter the new password
 at the masked prompt; it is hashed with bcrypt before being saved.
 
+## Add a student account
+
+Run this in an interactive PowerShell window:
+
+```powershell
+npm run add-student
+```
+
+Enter the student's registration number, full name, and a faculty ID from the
+displayed list, then enter their password at the masked prompt. The command
+creates both the student login and its student record in a database transaction.
+The registration number is also the student's login username. You do not need
+to generate or enter a password hash yourself; the command hashes the password
+with bcrypt before saving it. The student can sign in and submit a clearance
+request from the dashboard.
+
 ## Application routes
 
 - `/login.html` — login

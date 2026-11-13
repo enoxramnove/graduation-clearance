@@ -37,13 +37,22 @@ app.get('/ham.png', (_req, res) => {
 });
 app.use('/js', express.static(path.join(__dirname, 'js'), { fallthrough: false }));
 
-// Authentication Routes
-app.post('/api/auth/login', rateLimit({
+// Successful logins should not consume the failed-login allowance.
+const loginRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
+    skipSuccessfulRequests: true,
     standardHeaders: 'draft-8',
-    legacyHeaders: false
-}), authController.login);
+    legacyHeaders: false,
+    handler: (_req, res) => {
+        res.status(429).json({
+            error: 'Too many failed login attempts from this network. Please wait before trying again.'
+        });
+    }
+});
+
+// Authentication Routes
+app.post('/api/auth/login', loginRateLimit, authController.login);
 
 // Student Routes
 app.get('/api/student/status', verifyToken, verifyRole(['Student']), workflowController.getStudentStatus);

@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "reset-password": "node scripts/reset-password.js"
+    "reset-password": "node scripts/reset-password.js",
+    "add-student": "node scripts/add-student.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
